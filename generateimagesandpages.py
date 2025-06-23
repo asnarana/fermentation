@@ -4,16 +4,15 @@ import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
-
-# ─── Setup DB connection ─────────────────────────────────────────────────────
+#db connection
 load_dotenv()
 engine = create_engine(os.getenv("DB_URL"))
 
-# ─── Output directory ─────────────────────────────────────────────────────────
-out_dir = "pages"
-os.makedirs(out_dir, exist_ok=True)
+# output directory
+out_dir = "pages"  ## directory to write HTML pages into
+os.makedirs(out_dir, exist_ok=True) #create  it if it doesn't exist
 
-# ─── BAR-CHART KPIs configuration ─────────────────────────────────────────────
+# map  display name → forecast table name + snapshot image filename
 BAR_MAP = {
     "Batches per year":               {"table": "Batches_per_year_forecast",               "image": "BatchesPerYear.jpg"},
     "GFP Concentration (gL)":         {"table": "GFP_Concentration__gL__forecast",         "image": "GFPConcentration(gL).jpg"},
@@ -25,7 +24,7 @@ BAR_MAP = {
     "SpecificGrowth Rate (1hr)":      {"table": "SpecificGrowth_Rate__1hr__forecast",      "image": "specificgrowthrate - Copy.jpg"}
 }
 
-# ─── TIME-SERIES KPIs configuration ──────────────────────────────────────────
+#  map  display name → forecast table + snapshot image + metric column filter
 TS_MAP = {
     "Aeration":        {"table": "Aeration_ts_forecast",       "image": "Aeration.jpg",        "metric": "Air_Sparge_PV"},
     "Agitation":       {"table": "Agitation_ts_forecast",      "image": "Agitation.jpg",       "metric": "Agitation_PV"},
@@ -38,7 +37,7 @@ TS_MAP = {
     "Weight_PV":       {"table": "Weight_PV_ts_forecast",      "image": "WeightPV.jpg",        "metric": "Weight_PV"}
 }
 
-# ─── HTML template generator ─────────────────────────────────────────────────
+#HTML template generator
 def make_html(display_name, img_file, df_fc, metric=None):
     # Always show the snapshot image
     title = display_name
@@ -82,27 +81,32 @@ def make_html(display_name, img_file, df_fc, metric=None):
 """
     return html
 
-# ─── Generate bar HTML pages ──────────────────────────────────────────────────
+# generate bar chart html pages 
 for name, info in BAR_MAP.items():
     table = info["table"]
     img = info["image"]
     print(f"Generating bar HTML for {name} from table {table}")
+    # read forecast tables from db
     df_fc = pd.read_sql_table(table, engine)
     page = make_html(name, img, df_fc)
+    #  Render page HTML and write to file
     path = os.path.join(out_dir, f"{table}.html")
     with open(path, 'w', encoding='utf-8') as f:
         f.write(page)
     print(f" → Wrote {path}")
 
-# ─── Generate time-series HTML pages ──────────────────────────────────────────
+# generate time -series html pages 
 for name, info in TS_MAP.items():
     table = info["table"]
     img = info["image"]
     metric = info["metric"]
     print(f"Generating TS HTML for {name} from table {table}")
+    # Read forecast table
     df_fc = pd.read_sql_table(table, engine)
+    # filter on specific metric if present 
     if "metric" in df_fc.columns and metric:
         df_fc = df_fc[df_fc["metric"] == metric]
+    #render and write page 
     page = make_html(name, img, df_fc, metric)
     path = os.path.join(out_dir, f"{table}.html")
     with open(path, 'w', encoding='utf-8') as f:

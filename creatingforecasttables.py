@@ -6,11 +6,12 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from prophet import Prophet
 
-# ─── 1) Setup DB connection ────────────────────────────────────────────────────
-load_dotenv()
-engine = create_engine(os.getenv("DB_URL"))
 
-# ─── 2) Define table groups ─────────────────────────────────────────────────────
+
+load_dotenv() #loads DB_URL from .env
+engine = create_engine(os.getenv("DB_URL")) # # SQLAlchemy engine for PostgreSQL
+
+# bar/aggregate metrics (one value per batch or year)
 BAR_TABLES = [
     "Batches per year",
     "GFP Concentration (gL)",
@@ -21,7 +22,7 @@ BAR_TABLES = [
     "ProductBiomass (gg)",
     "SpecificGrowth Rate (1hr)"
 ]
-
+# time-series metrics (multiple readings per batch, over time)
 TIME_SERIES_TABLES = [
     "Aeration",
     "Agitation",
@@ -34,8 +35,9 @@ TIME_SERIES_TABLES = [
     "Weight_PV"
 ]
 
-# ─── 3) Date extraction util for batch IDs ─────────────────────────────────────
+#  parsing dates from Batch IDs
 def extract_ds(batch_str):
+    # algo : First try YYYYMMDD, then try Then try YYMMDD ;  returns a datetime or NaT if no date found.
     m = re.search(r"(\d{8})", batch_str)
     if m:
         return datetime.strptime(m.group(1), "%Y%m%d")
@@ -44,34 +46,37 @@ def extract_ds(batch_str):
         return datetime.strptime(m.group(1), "%y%m%d")
     return pd.NaT
 
-# ─── 4) Forecast bar tables ────────────────────────────────────────────────────
+# forecast for bar tables 
 for table in BAR_TABLES:
     print(f"\n=== Forecasting bar-table {table!r} ===")
-    df = pd.read_sql_table(table, engine)
+    df = pd.read_sql_table(table, engine) ## load the historical data 
     # choose ds & freq
+    # determine the date column and frequency:
     if "Year" in df.columns:
+        # annual data 
         df["ds"] = pd.to_datetime(df["Year"], format="%Y")
         freq = "Y"
     else:
+        # batch -based data: parse date from batch name
         batch_col = next(c for c in df.columns if re.search(r"batch", c, re.I))
         df["ds"] = df[batch_col].apply(extract_ds)
         freq = "M"
-    # pick y
+    # find the numeric column to forecast
     num_cols = df.select_dtypes(include="number").columns.tolist()
     ycol = next(c for c in num_cols if c != "Year")
     hist = df[["ds", ycol]].dropna().rename(columns={ycol: "y"})
-    # fit & forecast
+    # fit & forecast 5 future periods
     m = Prophet(yearly_seasonality=True)
     m.fit(hist)
     future = m.make_future_dataframe(periods=5, freq=freq)
     fc = m.predict(future)[["ds","yhat","yhat_lower","yhat_upper"]]
-    # write back
+    # write  forecast back to a new table in the database
     safe = re.sub(r"[^0-9A-Za-z_]","_", table)
     out_table = f"{safe}_forecast"
     fc.to_sql(out_table, engine, if_exists="replace", index=False)
     print(f" → Wrote {len(fc)} rows to '{out_table}'")
 
-# ─── 5) Forecast time-series tables ─────────────────────────────────────────────
+#  forecast time-series tables
 for table in TIME_SERIES_TABLES:
     print(f"\n=== Forecasting time-series {table!r} ===")
     df = pd.read_sql_table(table, engine)
@@ -85,14 +90,18 @@ for table in TIME_SERIES_TABLES:
     df["ds"] = df[time_col].apply(lambda h: start + pd.Timedelta(hours=h))
     freq = "H"
     # pick y
+    #  prepare  one forecast per metric (column) and per batch (if present)
     num_cols = df.select_dtypes(include="number").columns.tolist()
     ycols = [c for c in num_cols if c not in [time_col]]
     # for each batch (or all data)
     all_fc = []
     if batch_col:
+        ## loop through each batch group 
         for batch, grp in df.groupby(batch_col):
             grp = grp.sort_values("ds")
+            #melt multiple metrics into a long format
             hist = grp[["ds"] + ycols].melt("ds", var_name="metric", value_name="y").dropna()
+            # forecast  each metric separately
             for metric, sub in hist.groupby("metric"):
                 m = Prophet(yearly_seasonality=False, daily_seasonality=True)
                 m.fit(sub.rename(columns={"ds":"ds","y":"y"}))
@@ -102,6 +111,7 @@ for table in TIME_SERIES_TABLES:
                 pred["metric"] = metric
                 all_fc.append(pred)
     else:
+        # no batch grouping: forecast each metric over the whole dataset
         hist = df[["ds"] + ycols].melt("ds", var_name="metric", value_name="y").dropna()
         for metric, sub in hist.groupby("metric"):
             m = Prophet(daily_seasonality=True)

@@ -2,11 +2,11 @@ import os, re
 from dash import Dash, html, dcc, Input, Output
 from dotenv import load_dotenv
 
-# ─── 1) Setup ─────────────────────────────────────────────────────────────────
+#setting up the app
 load_dotenv()
 app = Dash(__name__)
 
-# ─── 2) KPI categories ─────────────────────────────────────────────────────────
+#this set of tables will specify the tables for the bar graphs
 BAR_TABLES = [
     "Batches per year",
     "GFP Concentration (gL)",
@@ -17,7 +17,7 @@ BAR_TABLES = [
     "ProductBiomass (gg)",
     "SpecificGrowth Rate (1hr)"
 ]
-
+#this set of tables will specify the tables for the time series
 TS_TABLES = [
     "Aeration",
     "Agitation",
@@ -30,7 +30,7 @@ TS_TABLES = [
     "Weight_PV"
 ]
 
-# ─── 3) Map display names to HTML detail pages ────────────────────────────────
+#  map display names to HTML detail pages
 # Bar-chart pages (_forecast.html)
 BAR_PAGES = {
     name: f"pages/{re.sub(r'[^0-9A-Za-z_]', '_', name)}_forecast.html"
@@ -41,13 +41,13 @@ TS_PAGES = {
     name: f"pages/{re.sub(r'[^0-9A-Za-z_]', '_', name)}_ts_forecast.html"
     for name in TS_TABLES
 }
-# Combine mappings
+# combine mappings
 DETAIL_PAGES = {**BAR_PAGES, **TS_PAGES}
 
-# Combined list for dropdown
+# combine the lists for dropdown
 TABLES = BAR_TABLES + TS_TABLES
 
-# ─── 4) Layout ─────────────────────────────────────────────────────────────────
+# how the layout will look on the pages
 app.layout = html.Div(style={"padding": "20px", "fontFamily": "Arial, sans-serif"}, children=[
     html.H1("Fermentation KPI Viewer"),
     dcc.Dropdown(
@@ -59,7 +59,7 @@ app.layout = html.Div(style={"padding": "20px", "fontFamily": "Arial, sans-serif
     html.Div(id='output-container')
 ])
 
-# ─── 5) Callback: embed HTML pages for both bar and time-series ──────────────
+#  callback: embed HTML pages for both bar and time-series ──────────────
 @app.callback(
     Output('output-container', 'children'),
     Input('table-selector', 'value')
@@ -79,6 +79,6 @@ def render_content(table_name):
 
     return html.P(f"Detail page not found for '{table_name}' at {page_path}.")
 
-# ─── 6) Run the server ─────────────────────────────────────────────────────────
+# running the server
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8050)
