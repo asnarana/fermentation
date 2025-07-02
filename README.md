@@ -1,7 +1,19 @@
 # Fermentation KPI Viewer
 
-**Project History:**
+A web dashboard for visualizing and forecasting key performance indicators (KPIs) in fermentation processes. Built with Dash, this app displays interactive forecasts and historical data for various fermentation metrics, using data from CSV files and/or a PostgreSQL database.
 This project began during my time at BTEC, where I initially created fermentation KPI visualizations using static tools. To optimize and modernize the workflow, I rebuilt the project as an interactive dashboard using Plotly Dash, incorporating screenshots of the original visuals and automating the generation of forecast pages and data visualizations.
+
+---
+
+Link to PowerBI visuals : https://app.powerbi.com/links/SfzKUpSNl-?ctid=80f23f4a-91a4-4566-8db1-3bcabb21d1cb&pbi_source=linkShare
+
+
+## Features
+- Interactive dashboard for fermentation KPIs
+- Visualizes both bar (aggregate) and time-series metrics
+- Forecasts generated using Facebook Prophet
+- Data sourced from CSV files and/or a PostgreSQL database (AWS-hosted)
+- Auto-generated HTML forecast pages and snapshot images
 
 ---
 
@@ -13,9 +25,11 @@ This project began during my time at BTEC, where I initially created fermentatio
 - **psycopg2-binary**: PostgreSQL database driver for Python, used by SQLAlchemy.
 - **Prophet**: For generating time-series forecasts of fermentation KPIs.
 - **python-dotenv**: For managing environment variables securely via a `.env` file.
-- **Docker**: (Optional) For containerizing the app to ensure consistent deployment across environments.
+- **Docker**: For containerizing the app to ensure consistent deployment across environments.
 - **HTML/CSS**: For the generated forecast pages and embedding snapshot images.
 - **Jupyter/Static Tools**: (Historical) Used for initial visualizations and screenshots at BTEC.
+
+---
 
 ---
 
@@ -23,6 +37,8 @@ This project began during my time at BTEC, where I initially created fermentatio
 - **Amazon EC2**: Used to host and run the Plotly Dash application in a scalable, cloud-based environment.
 - **Amazon RDS (PostgreSQL)**: Provides a managed PostgreSQL database instance for storing, updating, and querying fermentation KPI data and forecasts.
 - **Amazon ECR**: Used as a private Docker image registry to store and manage Docker images for the application, enabling seamless deployment to EC2 or other AWS services.
+
+---
 
 ---
 
@@ -90,14 +106,6 @@ This project began during my time at BTEC, where I initially created fermentatio
 
 ---
 
-## Features
-- Interactive dashboard for fermentation KPIs
-- Visualizes both bar (aggregate) and time-series metrics
-- Forecasts generated using Facebook Prophet
-- Data sourced from CSV files and/or a PostgreSQL database (AWS-hosted)
-- Auto-generated HTML forecast pages and snapshot images
-
----
 
 ## Directory Structure
 ```
@@ -137,39 +145,32 @@ CSV_FOLDER=fermcsvfiles
 
 **Important:** `.env` is excluded from git via `.gitignore` for security.
 
-### 3. Set Up a Virtual Environment (Recommended)
-```sh
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-```
 
-### 4. Install Dependencies
+
+### 3. Install Dependencies
 ```sh
 pip install -r requirements.txt
 ```
 
-### 5. Load Data into the Database (Optional)
+### 4. Load Data into the Database
 If you want to refresh the AWS PostgreSQL database with local CSVs:
 ```sh
 python bulk-load.py
 ```
 
-### 6. Generate Forecast Tables (Optional)
+### 5. Generate Forecast Tables 
 To create/update forecast tables in the database:
 ```sh
 python creatingforecasttables.py
 ```
 
-### 7. Generate HTML Forecast Pages (Optional)
+### 6. Generate HTML Forecast Pages 
 To generate HTML pages for each KPI forecast:
 ```sh
 python generateimagesandpages.py
 ```
 
-### 8. Run the Dashboard Locally
+### 7. Run the Dashboard Locally
 ```sh
 python app.py
 ```
@@ -177,7 +178,7 @@ python app.py
 
 ---
 
-## Docker Usage (Optional)
+## Docker Usage 
 Build and run the app in a container:
 ```sh
 docker build -t fermentation-app .
@@ -196,12 +197,6 @@ docker run -p 8050:8050 --env-file .env fermentation-app
 
 ---
 
-## Security Notes
-- **Never commit your `.env` file or credentials to version control.**
-- `.env` is already in `.gitignore`.
-- If you accidentally pushed `.env`, see [GitHub's guide](https://docs.github.com/en/github/authenticating-to-github/removing-sensitive-data-from-a-repository) to remove it from history.
-
----
 
 ## Dependencies
 Key Python packages:
@@ -211,10 +206,6 @@ See `requirements.txt` for the full list.
 
 ---
 
-## License
-Specify your license here.
 
----
 
-## Contact
-For questions or contributions, open an issue or pull request. 
+
